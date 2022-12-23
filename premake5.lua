@@ -1,19 +1,3 @@
-workspace "AudioToWav"
-	architecture "x64"
-	startproject "Editor"
-	
-	configurations
-	{
-		"Debug",
-		"Release",
-		"Dist"
-	}
-
-	flags
-	{
-		"MultiProcessorCompile"
-	}
-
 project "AudioToWav"
 	kind "StaticLib"
 	language "C++"
@@ -74,45 +58,3 @@ project "AudioToWav"
 		runtime "Release"
 		optimize "on"
         symbols "off"
-
-project "Editor"
-	kind "ConsoleApp"
-	language "C++"
-	cppdialect "C++17"
-	staticruntime "off"
-
-	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-
-	targetdir ("%{wks.location}/bin/" .. outputdir)
-	objdir ("%{wks.location}/bin-int/" .. outputdir)
-
-	files
-	{
-		"src-test/**.h",
-		"src-test/**.cpp",
-	}
-
-	includedirs
-	{
-		"include"
-	}
-
-	links
-	{
-		"AudioToWav"
-	}
-
-	filter "system:windows"
-		systemversion "latest"
-
-	filter "configurations:Debug"
-		runtime "Debug"
-		symbols "on"
-
-	filter "configurations:Release"
-		runtime "Release"
-		optimize "on"
-
-	filter "configurations:Dist"
-		runtime "Release"
-		optimize "on"
