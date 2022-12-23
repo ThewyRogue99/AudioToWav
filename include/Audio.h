@@ -1,18 +1,33 @@
 #pragma once
 
-#include <vector>
+#include <cstdint>
 
 namespace AudioToWav
 {
 	class Audio
 	{
 	public:
-		int GetNumChannels() const { return (int)Samples.size(); }
-		int GetNumSamples() const { return GetNumSamplesPerChannel() * GetNumChannels(); }
-		int GetNumSamplesPerChannel() const { return (int)Samples[0].size(); }
+		int GetNumChannels() const { return Channels; }
+		int GetNumSamples() const { return SamplesPerChannel * Channels; }
+		int GetNumSamplesPerChannel() const { return SamplesPerChannel; }
+		int GetSampleSize() const { return SampleSize; }
 		uint32_t GetSampleRate() const { return SampleRate; }
 
-		bool Empty() const { return Samples.size() < 1; }
+		size_t GetDataSize() const { return (size_t)(Channels * SamplesPerChannel) * SampleSize; }
+		const void* GetData() const { return Samples; }
+
+		bool Empty() const { return !Samples; }
+
+		void Clear()
+		{
+			delete[] Samples;
+
+			Samples = nullptr;
+			Channels = 0;
+			SamplesPerChannel = 0;
+			SampleSize = 0;
+			SampleRate = 0;
+		}
 
 		friend class Utils;
 
@@ -21,6 +36,9 @@ namespace AudioToWav
 
 		uint32_t SampleRate = 0;
 
-		std::vector<std::vector<float>> Samples = { };
+		int Channels = 0;
+		int SamplesPerChannel = 0;
+		int SampleSize = 0;
+		void* Samples = nullptr;
 	};
 }

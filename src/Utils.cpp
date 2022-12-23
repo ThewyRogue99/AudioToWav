@@ -1,35 +1,21 @@
 #include "Audio.h"
 #include "Utils.h"
 
-#include "AudioFile.h"
+#include <AudioFile.h>
 
 #define MINIMP3_IMPLEMENTATION
 #define MINIMP3_FLOAT_OUTPUT
 #define MINIMP3_ONLY_MP3
-#include "minimp3_ex.h"
+#include <minimp3_ex.h>
 
 #include <filesystem>
 
-#include "stb_vorbis.h"
+#include <vorbis/codec.h>
+#include <vorbis/vorbisfile.h>
+#include <vorbis/vorbisenc.h>
 
 namespace AudioToWav
 {
-	Audio Utils::LoadWav_Aiff(const std::wstring& FilePath)
-	{
-		Audio result;
-
-		AudioFile<float> f;
-		if (f.load(FilePath))
-		{
-			result.Samples = f.samples;
-			result.SampleRate = f.getSampleRate();
-
-			return result;
-		}
-
-		return Audio();
-	}
-
 	Audio Utils::LoadAudioFile(const std::wstring& FilePath)
 	{
 		std::filesystem::path fPath = FilePath;
@@ -49,6 +35,35 @@ namespace AudioToWav
 		return Audio();
 	}
 
+	Audio Utils::LoadWav_Aiff(const std::wstring& FilePath)
+	{
+		Audio result;
+
+		AudioFile<float> f;
+		if (f.load(FilePath))
+		{
+			result.SampleSize = sizeof(float);
+			result.Channels = f.getNumChannels();
+			result.SamplesPerChannel = f.getNumSamplesPerChannel();
+			result.SampleRate = f.getSampleRate();
+
+			result.Samples = new float[result.GetNumSamples()];
+
+			for (int i = 0; i < result.Channels; i++)
+			{
+				memcpy(
+					(float*)result.Samples + (i * result.SamplesPerChannel),
+					f.samples[i].data(),
+					result.SamplesPerChannel * sizeof(float)
+				);
+			}
+
+			return result;
+		}
+
+		return Audio();
+	}
+
 	Audio Utils::LoadMp3(const std::wstring& FilePath)
 	{
 		Audio result;
@@ -57,19 +72,14 @@ namespace AudioToWav
 		mp3dec_file_info_t info;
 		if (!mp3dec_load_w(&mp3d, FilePath.c_str(), &info, NULL, NULL))
 		{
-			int numSamples = (int)info.samples / info.channels;
+			result.Samples = new float[info.samples];
 
-			for (size_t channel = 0; channel < info.channels; channel++)
-			{
-				std::vector<mp3d_sample_t> ChannelSamples(numSamples);
-				for (int i = 0; i < numSamples; i++)
-				{
-					ChannelSamples[i] = (info.buffer + (channel * numSamples))[i];
-				}
+			memcpy(result.Samples, info.buffer, info.samples * sizeof(float));
 
-				result.SampleRate = info.hz;
-				result.Samples.push_back(ChannelSamples);
-			}
+			result.SampleSize = sizeof(float);
+			result.Channels = info.channels;
+			result.SamplesPerChannel = info.samples / info.channels;
+			result.SampleRate = info.hz;
 
 			free(info.buffer);
 
@@ -79,55 +89,56 @@ namespace AudioToWav
 		return Audio();
 	}
 
+	static bool ReadOggToBuffer(OggVorbis_File* vf, short** Buffer)
+	{
+		if (Buffer && *Buffer)
+		{
+			for (size_t size = 0, offset = 0, sel = 0;
+				(size = ov_read(vf, (char*)(*Buffer) + offset, 4096, 0, 2, 1, (int*)&sel)) != 0;
+				offset += size) {
+
+				if (size < 0)
+					return false;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
 	Audio Utils::LoadOgg(const std::wstring& FilePath)
 	{
-		std::ifstream fh(FilePath, std::ios::in  | std::ios::binary | std::ios::ate);
-		const size_t sz = fh.tellg();
-		if (sz <= 0) {
-			// error handling here
-		}
-		fh.seekg(0, std::ios::beg);
-		
-		uint8_t* Buff = nullptr;
-		if (fh.is_open())
+		FILE* f = _wfopen(FilePath.c_str(), L"rb");
+
+		OggVorbis_File vf;
+		int res = ov_open_callbacks(f, &vf, NULL, 0, OV_CALLBACKS_NOCLOSE);
+		if (res >= 0)
 		{
-			Buff = new uint8_t[sz];
-			fh.read((char*)Buff, sz);
+			Audio result;
+			
+			vorbis_info* vi = ov_info(&vf, -1);
 
-			fh.close();
+			result.SampleSize = sizeof(short);
+			result.SampleRate = vi->rate;
+			result.Channels = vi->channels;
+			result.SamplesPerChannel = ov_pcm_total(&vf, -1);
 
-			int channels, sample_rate;
-
-			int error;
-			stb_vorbis* f = stb_vorbis_open_memory(Buff, (int)sz, &error, nullptr);
-
-			float** output;
-			int numSamples = stb_vorbis_get_frame_float(f, &channels, &output);
-			stb_vorbis_info inf = stb_vorbis_get_info(f);
-			sample_rate = inf.sample_rate;
-
-			delete[] Buff;
-
-			if (numSamples)
+			short* Buffer = new short[result.SamplesPerChannel * result.Channels];
+			if (ReadOggToBuffer(&vf, &Buffer))
 			{
-				Audio result;
+				result.Samples = Buffer;
 
-				for (int channel = 0; channel < channels; channel++)
-				{
-					std::vector<float> ChannelSamples(numSamples);
-					for (int i = 0; i < numSamples; i++)
-					{
-						ChannelSamples[i] = output[channel][i];
-					}
-
-					result.SampleRate = sample_rate;
-					result.Samples.push_back(ChannelSamples);
-				}
-
-				stb_vorbis_close(f);
+				ov_clear(&vf);
+				fclose(f);
 
 				return result;
 			}
+
+			// Release file
+			delete[] Buffer;
+			ov_clear(&vf);
+			fclose(f);
 		}
 
 		return Audio();
