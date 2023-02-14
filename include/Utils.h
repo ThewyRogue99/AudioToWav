@@ -13,6 +13,5 @@ namespace AudioToWav
 	private:
 		static Audio LoadWav_Aiff(const std::wstring& FilePath);
 		static Audio LoadMp3(const std::wstring& FilePath);
-		static Audio LoadOgg(const std::wstring& FilePath);
 	};
 }

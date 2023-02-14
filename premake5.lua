@@ -11,40 +11,19 @@ project "AudioToWav"
 
 	files
 	{
-        "include/**.h",
 		"src/**.cpp",
-        "src/**.h",
-		"vendor/Vorbis/lib/**.h",
-		"vendor/Vorbis/lib/**.c",
-		"vendor/libogg/include/**.h",
-		"vendor/libogg/src/**.c"
+        "src/**.h"
 	}
 
     includedirs
     {
         "include",
         "vendor/AudioFile",
-		"vendor/minimp3",
-		"vendor/stb",
-		"vendor/Vorbis/include",
-		"vendor/libogg/include"
+		"vendor/minimp3"
     }
-
-	defines
-	{
-		"LIBOGG_EXPORTS"
-	}
 
     filter "system:windows"
 		systemversion "latest"
-
-		excludes
-		{
-			"vendor/Vorbis/lib/barkmel.c",
-			"vendor/Vorbis/lib/misc.c",
-			"vendor/Vorbis/lib/psytune.c",
-			"vendor/Vorbis/lib/tone.c"
-		}
 
 	filter "configurations:Debug"
 		runtime "Debug"

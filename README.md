@@ -10,8 +10,6 @@ AudioToWav is a C++ library that is made for game engines to help loading audio 
 
 - .mp3
 
-- .ogg
-
 This library can only load audio files in this format.
 
 ## Usage
@@ -40,5 +38,3 @@ This is a static C++ library and it requires premake to create a project and be 
 This library is a wrapper for the libraries given below.
 - [adamstark](https://github.com/adamstark)/**[AudioFile](https://github.com/adamstark/AudioFile)**
 - [lieff](https://github.com/lieff)/**[minimp3](https://github.com/lieff/minimp3)**
-- [xiph](https://github.com/xiph)/**[vorbis](https://github.com/xiph/vorbis)**
-- [gcp](https://github.com/gcp)/**[libogg](https://github.com/gcp/libogg)**

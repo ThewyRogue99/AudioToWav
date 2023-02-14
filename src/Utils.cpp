@@ -10,10 +10,6 @@
 
 #include <filesystem>
 
-#include <vorbis/codec.h>
-#include <vorbis/vorbisfile.h>
-#include <vorbis/vorbisenc.h>
-
 namespace AudioToWav
 {
 	Audio Utils::LoadAudioFile(const std::wstring& FilePath)
@@ -28,8 +24,6 @@ namespace AudioToWav
 				return LoadWav_Aiff(FilePath);
 			else if (ext == L".mp3")
 				return LoadMp3(FilePath);
-			else if (ext == L".ogg")
-				return LoadOgg(FilePath);
 		}
 
 		return Audio();
@@ -47,12 +41,12 @@ namespace AudioToWav
 			result.SamplesPerChannel = f.getNumSamplesPerChannel();
 			result.SampleRate = f.getSampleRate();
 
-			result.Samples = new float[result.GetNumSamples()];
+			result.Data = new float[result.GetNumSamples()];
 
 			for (int i = 0; i < result.Channels; i++)
 			{
 				memcpy(
-					(float*)result.Samples + (i * result.SamplesPerChannel),
+					(float*)result.Data + (i * result.SamplesPerChannel),
 					f.samples[i].data(),
 					result.SamplesPerChannel * sizeof(float)
 				);
@@ -72,73 +66,19 @@ namespace AudioToWav
 		mp3dec_file_info_t info;
 		if (!mp3dec_load_w(&mp3d, FilePath.c_str(), &info, NULL, NULL))
 		{
-			result.Samples = new float[info.samples];
+			result.Data = new float[info.samples];
 
-			memcpy(result.Samples, info.buffer, info.samples * sizeof(float));
+			memcpy(result.Data, info.buffer, info.samples * sizeof(float));
 
 			result.SampleSize = sizeof(float);
 			result.Channels = info.channels;
 			result.SamplesPerChannel = info.samples / info.channels;
 			result.SampleRate = info.hz;
+			result.DataSize = info.samples * sizeof(float);
 
 			free(info.buffer);
 
 			return result;
-		}
-
-		return Audio();
-	}
-
-	static bool ReadOggToBuffer(OggVorbis_File* vf, short** Buffer)
-	{
-		if (Buffer && *Buffer)
-		{
-			for (size_t size = 0, offset = 0, sel = 0;
-				(size = ov_read(vf, (char*)(*Buffer) + offset, 4096, 0, 2, 1, (int*)&sel)) != 0;
-				offset += size) {
-
-				if (size < 0)
-					return false;
-			}
-
-			return true;
-		}
-
-		return false;
-	}
-
-	Audio Utils::LoadOgg(const std::wstring& FilePath)
-	{
-		FILE* f = _wfopen(FilePath.c_str(), L"rb");
-
-		OggVorbis_File vf;
-		int res = ov_open_callbacks(f, &vf, NULL, 0, OV_CALLBACKS_NOCLOSE);
-		if (res >= 0)
-		{
-			Audio result;
-			
-			vorbis_info* vi = ov_info(&vf, -1);
-
-			result.SampleSize = sizeof(short);
-			result.SampleRate = vi->rate;
-			result.Channels = vi->channels;
-			result.SamplesPerChannel = ov_pcm_total(&vf, -1);
-
-			short* Buffer = new short[result.SamplesPerChannel * result.Channels];
-			if (ReadOggToBuffer(&vf, &Buffer))
-			{
-				result.Samples = Buffer;
-
-				ov_clear(&vf);
-				fclose(f);
-
-				return result;
-			}
-
-			// Release file
-			delete[] Buffer;
-			ov_clear(&vf);
-			fclose(f);
 		}
 
 		return Audio();

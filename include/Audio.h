@@ -13,16 +13,16 @@ namespace AudioToWav
 		int GetSampleSize() const { return SampleSize; }
 		uint32_t GetSampleRate() const { return SampleRate; }
 
-		size_t GetDataSize() const { return (size_t)(Channels * SamplesPerChannel) * SampleSize; }
-		const void* GetData() const { return Samples; }
+		size_t GetDataSize() const { return DataSize; }
+		const void* GetData() const { return Data; }
 
-		bool Empty() const { return !Samples; }
+		bool Empty() const { return !Data; }
 
 		void Clear()
 		{
-			delete[] Samples;
+			delete[] Data;
 
-			Samples = nullptr;
+			Data = nullptr;
 			Channels = 0;
 			SamplesPerChannel = 0;
 			SampleSize = 0;
@@ -39,6 +39,8 @@ namespace AudioToWav
 		int Channels = 0;
 		int SamplesPerChannel = 0;
 		int SampleSize = 0;
-		void* Samples = nullptr;
+
+		void* Data = nullptr;
+		size_t DataSize = 0;
 	};
 }
